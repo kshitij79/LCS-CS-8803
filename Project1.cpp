@@ -227,51 +227,40 @@ vector<vector<int>> simplifyCNF(const vector<vector<int>>& clauses) {
     return reducedClauses;
 }
 
+vector<vector<int>> furtherReduceCNF(const vector<vector<int>>& clauses) {
+    vector<vector<int>> furtherReducedClauses;
+    unordered_set<int> singleVariableLiterals;
 
-vector<vector<int>> simplifyCNF2(const vector<vector<int>>& clauses) {
-    vector<vector<int>> reducedClauses;
-
-    unordered_set<int> tautologicalLiterals;
-
-    // First pass: Identify tautological clauses and literals
+    // First pass: Identify single-variable clauses and their literals
     for (const auto& clause : clauses) {
-        unordered_set<int> uniqueLiterals(clause.begin(), clause.end());
-
-        for (const int& literal : uniqueLiterals) {
-            if (uniqueLiterals.find(-literal) != uniqueLiterals.end()) {
-                tautologicalLiterals.insert(abs(literal));
-                break;
-            }
+        if (clause.size() == 1) {
+            singleVariableLiterals.insert(clause[0]);
         }
     }
 
-    // Second pass: Remove clauses made redundant by tautological literals and simplify other clauses
+    // Second pass: Remove clauses made redundant by single-variable literals and simplify other clauses
     for (const auto& clause : clauses) {
-        unordered_set<int> uniqueLiterals(clause.begin(), clause.end());
+        vector<int> newClause;
         bool shouldAddClause = true;
 
-        for (const int& tautLiteral : tautologicalLiterals) {
-            if (uniqueLiterals.find(tautLiteral) != uniqueLiterals.end() ||
-                uniqueLiterals.find(-tautLiteral) != uniqueLiterals.end()) {
+        for (const auto& literal : clause) {
+            // if literal is a single-variable literal, then the whole clause can be removed.
+            if (singleVariableLiterals.find(literal) != singleVariableLiterals.end()) {
                 shouldAddClause = false;
                 break;
             }
+            // if the negation of literal is a single-variable literal, then just skip this literal.
+            if (singleVariableLiterals.find(-literal) == singleVariableLiterals.end()) {
+                newClause.push_back(literal);
+            }
         }
 
-        if (shouldAddClause) {
-            vector<int> reducedClause;
-            for (const int& literal : uniqueLiterals) {
-                if (tautologicalLiterals.find(abs(literal)) == tautologicalLiterals.end()) {
-                    reducedClause.push_back(literal);
-                }
-            }
-            if (!reducedClause.empty()) {
-                reducedClauses.push_back(reducedClause);
-            }
+        if (shouldAddClause && !newClause.empty()) {
+            furtherReducedClauses.push_back(newClause);
         }
     }
 
-    return reducedClauses;
+    return furtherReducedClauses;
 }
 
 bool DPLL(vector<vector<int>> clauses, unordered_map<int, bool> model);
@@ -330,6 +319,85 @@ bool DPLL(vector<vector<int>> clauses, unordered_map<int, bool> model) {
     return false;
 }
 
+
+bool graphDPLL(std::vector<std::vector<int>> &clauses, std::unordered_map<int, bool> &assignment) {
+    if (clauses.empty()) return true;
+    if (std::any_of(clauses.begin(), clauses.end(), [](const std::vector<int>& clause) { return clause.empty(); })) return false;
+
+    // Unit propagation
+    std::unordered_set<int> unitClauses;
+    for (const auto& clause : clauses) {
+        if (clause.size() == 1) unitClauses.insert(clause[0]);
+    }
+    
+    if (!unitClauses.empty()) {
+        std::vector<std::vector<int>> newClauses;
+        for (const auto& clause : clauses) {
+            std::vector<int> newClause;
+            for (auto literal : clause) {
+                if (unitClauses.count(literal)) goto NextClause;
+                if (unitClauses.count(-literal)) continue;
+                newClause.push_back(literal);
+            }
+            newClauses.push_back(newClause);
+            NextClause: continue;
+        }
+
+        for (auto unit : unitClauses) {
+            assignment[std::abs(unit)] = unit > 0;
+        }
+
+        return graphDPLL(newClauses, assignment);
+    }
+
+    // Choose a literal to branch on
+    int literal = std::abs(clauses[0][0]);
+
+    // Try assigning the literal to true
+    std::unordered_map<int, bool> newAssignment = assignment;
+    newAssignment[literal] = true;
+
+    std::vector<std::vector<int>> newClauses;
+    for (const auto& clause : clauses) {
+        std::vector<int> newClause;
+        for (auto l : clause) {
+            if (l == literal) goto Next;
+            if (l == -literal) continue;
+            newClause.push_back(l);
+        }
+        newClauses.push_back(newClause);
+        Next: continue;
+    }
+
+    if (graphDPLL(newClauses, newAssignment)) {
+        assignment = newAssignment;
+        return true;
+    }
+
+    // Try assigning the literal to false
+    newAssignment = assignment;
+    newAssignment[literal] = false;
+
+    newClauses.clear();
+    for (const auto& clause : clauses) {
+        std::vector<int> newClause;
+        for (auto l : clause) {
+            if (l == -literal) goto Skip;
+            if (l == literal) continue;
+            newClause.push_back(l);
+        }
+        newClauses.push_back(newClause);
+        Skip: continue;
+    }
+
+    if (graphDPLL(newClauses, newAssignment)) {
+        assignment = newAssignment;
+        return true;
+    }
+
+    return false;
+}
+
 int main()
 {
     int no_of_houses = 5;
@@ -355,6 +423,7 @@ int main()
     auto [i, j, k] = getValues(84);
     cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
 
+    // 1, 52, 79, 105, 61, 111, 63, 92, 
     // auto [i, j, k] = getValues(10);
     // cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
 
@@ -369,21 +438,21 @@ int main()
 
     vector <vector<int>> clauses = createClauses();
 
-    vector <vector<int>> reducedClauses = simplifyCNF(clauses);
+    vector <vector<int>> reducedClauses = furtherReduceCNF(simplifyCNF(clauses));
 
     printCNF(reducedClauses);
 
-    // unordered_map<int, bool> model;
-    // bool result = DPLL(reducedClauses, model);
+    unordered_map<int, bool> model;
+    bool result = graphDPLL(reducedClauses, model);
     
-    // if (result) {
-    //     cout << "SAT\n";
-    //     for (const auto &entry : model) {
-    //         cout << "x" << entry.first << " = " << entry.second << "\n";
-    //     }
-    // } else {
-    //     cout << "UNSAT\n";
-    // }
+    if (result) {
+        cout << "SAT\n";
+        for (const auto &entry : model) {
+            cout << "x" << entry.first << " = " << entry.second << "\n";
+        }
+    } else {
+        cout << "UNSAT\n";
+    }
 
     cout << "CNF and DPLL procedure ends" << endl;
 }
