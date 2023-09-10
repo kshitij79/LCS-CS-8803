@@ -17,34 +17,34 @@ tuple<int, int, int> getValues(int id) {
 vector<vector<int>> clauseHouseDifferentCategory(int category_index) {
     vector<vector<int>> clauses;
 
-    // Each house must have at least one category
+    // Each house must have at least one category value for each category
     for (int i = 1; i <= 5; ++i) {
         vector<int> clause;
         for (int k = 1; k <= 5; ++k) {
-            clause.push_back(getID(i, 1, k));
+            clause.push_back(getID(i, category_index, k));
         }
         clauses.push_back(clause);
     }
 
-    // Each house can have at most one category
+    // Each house can have at most one category value
     for (int i = 1; i <= 5; ++i) {
         for (int k1 = 1; k1 <= 5; ++k1) {
             for (int k2 = k1 + 1; k2 <= 5; ++k2) {
                 vector<int> clause;
-                clause.push_back(-getID(i, 1, k1));
-                clause.push_back(-getID(i, 1, k2));
+                clause.push_back(-getID(i, category_index, k1));
+                clause.push_back(-getID(i, category_index, k2));
                 clauses.push_back(clause);
             }
         }
     }
 
-    // No two houses have the same category
+    // No two houses have the same category value
     for (int k = 1; k <= 5; ++k) {
         for (int i1 = 1; i1 <= 5; ++i1) {
             for (int i2 = i1 + 1; i2 <= 5; ++i2) {
                 vector<int> clause;
-                clause.push_back(-getID(i1, 1, k));
-                clause.push_back(-getID(i2, 1, k));
+                clause.push_back(-getID(i1, category_index, k));
+                clause.push_back(-getID(i2, category_index, k));
                 clauses.push_back(clause);
             }
         }
@@ -117,8 +117,8 @@ vector<vector<int>> createHorseNeighDunhillClauses( int category1Index, int cate
 vector<vector<int>> createClauses() {
     vector<vector<int>> clauses;
     for( int j=1; j<=5; j++){
-        vector<vector<int>> houseDifferentColour = clauseHouseDifferentCategory(j);
-        clauses.insert(clauses.end(), houseDifferentColour.begin(), houseDifferentColour.end());
+        vector<vector<int>> houseDifferentCategory = clauseHouseDifferentCategory(j);
+        clauses.insert(clauses.end(), houseDifferentCategory.begin(), houseDifferentCategory.end());
     }
 
     vector<vector<int>> condition1Clause = createImplicationClause(2, 1, 1, 1); // National: 2, Brit: 1, Color: 1, Red: 1
@@ -131,7 +131,7 @@ vector<vector<int>> createClauses() {
     clauses.insert(clauses.end(), condition3Clause.begin(), condition3Clause.end());
     
     vector<vector<int>> condition4Clause = createWhiteLeftNeighGreenClauses(1, 2, 1, 5); // Color: 1, Green: 2, COlor: 1, White: 5
-    clauses.insert(clauses.end(), condition3Clause.begin(), condition3Clause.end());
+    clauses.insert(clauses.end(), condition4Clause.begin(), condition4Clause.end());
 
     vector<vector<int>> condition5Clause = createImplicationClause(1, 2, 3, 3); // Color: 1, Green: 2, Beverage: 3, Coffee: 3
     clauses.insert(clauses.end(), condition5Clause.begin(), condition5Clause.end());
@@ -154,23 +154,21 @@ vector<vector<int>> createClauses() {
     vector<vector<int>> condition11Clause = createHorseNeighDunhillClauses(5, 4, 4, 2); // Pet: 5, Horses: 4, Cigar: 4, Dunhill: 2
     clauses.insert(clauses.end(), condition11Clause.begin(), condition11Clause.end());
     
-    vector<vector<int>> condition12Clause = createImplicationClause(4, 3, 3, 4); // Cigar: 4, Bluemasters: 3, Beverage: 3, Beer: 4
+    vector<vector<int>> condition12Clause = createImplicationClause(4, 4, 3, 5); // Cigar: 4, Bluemasters: 4, Beverage: 3, Beer: 5
     clauses.insert(clauses.end(), condition12Clause.begin(), condition12Clause.end());
 
-    vector<vector<int>> condition13Clause = createImplicationClause(2, 4, 4, 4); // National: 2, German: 4, Cigar: 4, Prince: 4
+    vector<vector<int>> condition13Clause = createImplicationClause(2, 4, 4, 5); // National: 2, German: 4, Cigar: 4, Prince: 5
     clauses.insert(clauses.end(), condition13Clause.begin(), condition13Clause.end());
 
-    // vector<vector<int>> condition14Clause = createHorseNeighDunhillClauses(2, 5, 1, 3); // National: 2, Norwegian: 5, Color: 1, Blue: 3
-    // clauses.insert(clauses.end(), condition14Clause.begin(), condition14Clause.end());
+    vector<vector<int>> condition14Clause = createHorseNeighDunhillClauses(2, 5, 1, 3); // National: 2, Norwegian: 5, Color: 1, Blue: 3
+    clauses.insert(clauses.end(), condition14Clause.begin(), condition14Clause.end());
 
-    vector<vector<int>> condition15Clause = createHorseNeighDunhillClauses(4, 2, 3, 1); // Cigar: 4, Blends: 2, Beverage: 3, Water: 1
+    vector<vector<int>> condition15Clause = createHorseNeighDunhillClauses(4, 3, 3, 4); // Cigar: 4, Blends: 3, Beverage: 3, Water: 4
     clauses.insert(clauses.end(), condition15Clause.begin(), condition15Clause.end());
 
     /*
-        add clause to make dpll faster
+        add more clauses to make dpll faster
     */
-    vector<vector<int>> condition16Clause = createSingleTruthClauses(2, 1, 3); // House: 2, Color: 1, Blue: 3
-    clauses.insert(clauses.end(), condition16Clause.begin(), condition16Clause.end());
 
     return clauses;
 }
@@ -262,63 +260,6 @@ vector<vector<int>> furtherReduceCNF(const vector<vector<int>>& clauses) {
 
     return furtherReducedClauses;
 }
-
-bool DPLL(vector<vector<int>> clauses, unordered_map<int, bool> model);
-
-bool allClausesSatisfied(const vector<vector<int>> &clauses, const unordered_map<int, bool> &model) {
-    for (const auto &clause : clauses) {
-        bool clauseSatisfied = false;
-        for (int literal : clause) {
-            int var = abs(literal);
-            if (model.find(var) != model.end()) {
-                bool value = model.at(var);
-                if (literal > 0 && value || literal < 0 && !value) {
-                    clauseSatisfied = true;
-                    break;
-                }
-            }
-        }
-        if (!clauseSatisfied) return false;
-    }
-    return true;
-}
-
-bool DPLL(vector<vector<int>> clauses, unordered_map<int, bool> model) {
-    // Check if all clauses are satisfied
-    if (allClausesSatisfied(clauses, model)) {
-        return true;
-    }
-
-    // Select an unassigned variable
-    int unassignedVar = 0;
-    for (const auto &clause : clauses) {
-        for (int literal : clause) {
-            int var = abs(literal);
-            if (model.find(var) == model.end()) {
-                unassignedVar = var;
-                break;
-            }
-        }
-        if (unassignedVar) break;
-    }
-    if (!unassignedVar) return false;
-
-    // Try both true and false for the unassigned variable
-    unordered_map<int, bool> modelWithTrue = model;
-    modelWithTrue[unassignedVar] = true;
-    if (DPLL(clauses, modelWithTrue)) {
-        return true;
-    }
-    
-    unordered_map<int, bool> modelWithFalse = model;
-    modelWithFalse[unassignedVar] = false;
-    if (DPLL(clauses, modelWithFalse)) {
-        return true;
-    }
-
-    return false;
-}
-
 
 bool graphDPLL(std::vector<std::vector<int>> &clauses, std::unordered_map<int, bool> &assignment) {
     if (clauses.empty()) return true;
@@ -423,18 +364,7 @@ int main()
     auto [i, j, k] = getValues(84);
     cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
 
-    // 1, 52, 79, 105, 61, 111, 63, 92, 
-    // auto [i, j, k] = getValues(10);
-    // cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
-
-    // auto [i, j, k] = getValues(28);
-    // cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
-
-    // auto [i, j, k] = getValues(84);
-    // cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
-
-
-    cout << "Literal creations ends here" << endl;
+    cout << "Literal creations ends here, Clause generator begins" << endl;
 
     vector <vector<int>> clauses = createClauses();
 
