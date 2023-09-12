@@ -1,0 +1,26 @@
+SAT
+House1-Beverage:Water = T
+House1-Cigar:Dunhill = T
+House1-Color:Yellow = T
+House1-Nationality:Norwegian = T
+House1-Pet:Cats = T
+House2-Beverage:Tea = T
+House2-Cigar:Blends = T
+House2-Color:Blue = T
+House2-Nationality:Dane = T
+House2-Pet:Horse = T
+House3-Beverage:Milk = T
+House3-Cigar:Pall Mall = T
+House3-Color:Red = T
+House3-Nationality:Brit = T
+House3-Pet:Birds = T
+House4-Beverage:Coffee = T
+House4-Cigar:Prince = T
+House4-Color:Green = T
+House4-Nationality:German = T
+House4-Pet:Fish = T
+House5-Beverage:Beer = T
+House5-Cigar:Bluemasters = T
+House5-Color:White = T
+House5-Nationality:Swede = T
+House5-Pet:Dogs = T
