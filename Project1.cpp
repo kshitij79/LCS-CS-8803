@@ -91,15 +91,6 @@ vector<vector<int>> createWhiteLeftNeighGreenClauses(int category1Index, int cat
         vector<int> clause2 = {-greenId, whiteId}; // ¬White ∨ Green (of the house to its left)
         clauses.push_back(clause2);
     }
-
-    // int whiteIdNotFirst = getID(1, category2Index, category2Value);  
-    // cout << whiteIdNotFirst << "whiteIdNotFirst"<<endl;
-    // vector<int> clause3 = {-whiteIdNotFirst}; 
-    // clauses.push_back(clause3);
-
-    // int greenID = getID(5, category1Index, category1Value);  
-    // vector<int> clause4 = {-greenID}; 
-    // clauses.push_back(clause4);
     
     return clauses;
 }
@@ -134,42 +125,6 @@ vector<vector<int>> createHorseNeighDunhillClauses( int category1Index, int cate
      
     return clauses;
 }
-
-// vector<vector<int>> createHorseNeighDunhillClauses(int category1Index, int category1Value, int category2Index, int category2Value) {
-//     vector<vector<int>> clauses;
-
-//     // If there's a horse in house i, then there must be a Dunhill in house i-1 or i+1
-//     for (int i = 1; i <= 5; ++i) {
-//         int horseId = getID(i, category1Index, category1Value);
-
-//         if (i > 1) {
-//             int dunhillLeft = getID(i - 1, category2Index, category2Value);
-//             clauses.push_back({-horseId, dunhillLeft});
-//         }
-
-//         if (i < 5) {
-//             int dunhillRight = getID(i + 1, category2Index, category2Value);
-//             clauses.push_back({-horseId, dunhillRight});
-//         }
-//     }
-
-//     // // If there's a Dunhill in house i, then there must be a horse in house i-1 or i+1
-//     // for (int i = 1; i <= 5; ++i) {
-//     //     int dunhillId = getID(i, category2Index, category2Value);
-
-//     //     if (i > 1) {
-//     //         int horseLeft = getID(i - 1, category1Index, category1Value);
-//     //         clauses.push_back({-dunhillId, horseLeft});
-//     //     }
-
-//     //     if (i < 5) {
-//     //         int horseRight = getID(i + 1, category1Index, category1Value);
-//     //         clauses.push_back({-dunhillId, horseRight});
-//     //     }
-//     // }
-
-//     return clauses;
-// }
 
 vector<vector<int>> createClauses() {
     vector<vector<int>> clauses;
@@ -232,7 +187,20 @@ vector<vector<int>> createClauses() {
     return clauses;
 }
 
-void printCNF(const vector<vector<int>>& clauses, vector<string> &categories, vector<vector<string>> &values) {
+void printCNF(const vector<vector<int>>& clauses) {
+    cout << "p cnf " << 125 << " " << clauses.size() << endl;
+
+    for (const auto& clause : clauses) {
+        for (int literal : clause) {
+            auto [i, j, k] = getValues(int(abs(literal)));
+
+            cout << literal << " ";
+        }
+        cout << "0" << endl;
+    }
+}
+
+void printCNFDebug(const vector<vector<int>>& clauses, vector<string> &categories, vector<vector<string>> &values) {
     cout << "p cnf " << 125 << " " << clauses.size() << endl;
 
     for (const auto& clause : clauses) {
@@ -432,21 +400,17 @@ int main()
         }
     }
 
-    auto [i, j, k] = getValues(84);
-    cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
+    // auto [i, j, k] = getValues(84);
+    // cout << "Original values from ID: Home " << i << ", Category " << categories[j-1] << ", Value " << values[j-1][k-1] << endl;
 
     cout << "Literal creations ends here, Clause generator begins" << endl;
 
-    vector <vector<int>> clauses = createClauses();
-    // vector <vector<int>> clauses;
-    // clauses.push_back({1, -2, 3}); // represents 1 OR -2 OR 3
-    // clauses.push_back({-1, 2});    // represents -1 OR 2
-    // clauses.push_back({-2, -3});   // represents -2 OR -3
-    // clauses.push_back({1, 3});  
-    // clauses.push_back({-1, 2, -3});  
-    vector <vector<int>> reducedClauses = furtherReduceCNF(simplifyCNF(clauses));
+    vector <vector<int>> clauses = createClauses(); 
+    // vector <vector<int>> reducedClauses = furtherReduceCNF(simplifyCNF(clauses));
 
-    printCNF(clauses, categories, values);
+    cout << "Clause generator ends" << endl;
+
+    printCNF(clauses);
 
     unordered_map<int, bool> model;
     bool result = graphDPLL(clauses, model);
@@ -456,29 +420,14 @@ int main()
         for (const auto &entry : model) {
             auto [i, j, k] = getValues(entry.first);
             int houseNo = i;
-            // cout<<houseNo;
             string category = categories[j-1];
-            // cout<<category;
             string categoryValue = values[j-1][k-1];
-            // cout<<categoryValue; 
-            // cout << "x" << entry.first << " = " << entry.second << "\n";
             if(entry.second==1)
-                cout<< houseNo << "_" << category << "_" << categoryValue << " = " << "T"<< endl;        }
+                cout<< "House" << houseNo << "-" << category << ":" << categoryValue << " = " << "T"<< endl;        
+        }
     } else {
         cout << "UNSAT\n";
     }
 
-    // vector <int> answer = {5 ,10 ,15 ,19 ,25 ,28 ,33 ,36 ,41 ,46 ,51 ,56 ,62 ,68 ,73 ,79 ,82 ,89 ,92 ,97 ,102 ,109 ,113 ,120 ,124 };
-    // for (const auto a: answer){
-    //     auto [i, j, k] = getValues(a);
-    //         int houseNo = i;
-    //         // cout<<houseNo;
-    //         string category = categories[j-1];
-    //         // cout<<category;
-    //         string categoryValue = values[j-1][k-1];
-    //         // cout<<categoryValue; 
-    //         // cout << "x" << entry.first << " = " << entry.second << "\n";
-    //         cout<< houseNo << "_" << category << "_" << categoryValue << " = " << "T"<< endl;
-    // }
     cout << "CNF and DPLL procedure ends" << endl;
 }
