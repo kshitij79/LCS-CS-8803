@@ -3,127 +3,6 @@
 
 using namespace std;
 
-bool simplify(std::vector<std::vector<int>>& clauses, int literal) {
-    bool isUnit = false;
-    auto clause_it = clauses.begin();
-    while(clause_it != clauses.end()) {
-        if(std::find(clause_it->begin(), clause_it->end(), literal) != clause_it->end()) {
-            // The clause is satisfied by the literal, so remove the entire clause
-            clause_it = clauses.erase(clause_it);
-        } else {
-            auto lit_it = std::find(clause_it->begin(), clause_it->end(), -literal);
-            if(lit_it != clause_it->end()) {
-                // The clause contains the negated literal, so remove the literal
-                clause_it->erase(lit_it);
-                if(clause_it->empty()) return false; // Empty clause, so the formula is unsatisfiable
-            }
-            clause_it++;
-        }
-    }
-    return true;
-}
-
-bool simpleHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment) {
-    // If there are no clauses, it's satisfiable
-    if(clauses.empty()) return true;
-    
-    // If there's an empty clause, it's unsatisfiable
-    for(const auto& clause : clauses) if(clause.empty()) return false;
-
-    // Find the first unassigned literal
-    int literal = 0;
-    for(const auto& clause : clauses) {
-        for(int lit : clause) {
-            if(assignment.find(abs(lit)) == assignment.end()) {
-                literal = lit;
-                break;
-            }
-        }
-        if(literal != 0) break;
-    }
-
-    // If all literals are assigned, return true as every clause must be satisfied
-    if(literal == 0) return true;
-
-    // Try assigning the literal to true
-    assignment[abs(literal)] = (literal > 0);
-    auto tempClauses = clauses;
-    if(simplify(tempClauses, literal)) {
-        if(simpleHeuristicDPLL(tempClauses, assignment)) return true;
-    }
-    
-    // Backtrack and try assigning the literal to false
-    assignment[abs(literal)] = (literal < 0);
-    tempClauses = clauses;
-    if(simplify(tempClauses, -literal)) {
-        if(simpleHeuristicDPLL(tempClauses, assignment)) return true;
-    }
-
-    // Neither assignment resulted in satisfiability
-    assignment.erase(abs(literal));
-    return false;
-}
-
-bool randomHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment) {
-    // If there are no clauses, it's satisfiable
-    if(clauses.empty()) return true;
-    
-    // If there's an empty clause, it's unsatisfiable
-    for(const auto& clause : clauses) if(clause.empty()) return false;
-
-    // Setup for random choice
-    std::vector<int> unassigned_literals;
-    for(const auto& clause : clauses) {
-        for(int lit : clause) {
-            if(assignment.find(abs(lit)) == assignment.end() && 
-               std::find(unassigned_literals.begin(), unassigned_literals.end(), lit) == unassigned_literals.end()) {
-                unassigned_literals.push_back(lit);
-            }
-        }
-    }
-
-    // If all literals are assigned, return true
-    if(unassigned_literals.empty()) return true;
-
-    // Randomly select an unassigned literal for splitting
-    std::random_device rd;
-    std::mt19937 g(rd());
-    int random_index = g() % unassigned_literals.size();
-    int literal = unassigned_literals[random_index];
-
-    // Find the first unassigned literal
-    for(const auto& clause : clauses) {
-        for(int lit : clause) {
-            if(assignment.find(abs(lit)) == assignment.end()) {
-                literal = lit;
-                break;
-            }
-        }
-        if(literal != 0) break;
-    }
-
-    // If all literals are assigned, return true as every clause must be satisfied
-    if(literal == 0) return true;
-
-    // Try assigning the literal to true
-    assignment[abs(literal)] = (literal > 0);
-    auto tempClauses = clauses;
-    if(simplify(tempClauses, literal)) {
-        if(randomHeuristicDPLL(tempClauses, assignment)) return true;
-    }
-    
-    // Backtrack and try assigning the literal to false
-    assignment[abs(literal)] = (literal < 0);
-    tempClauses = clauses;
-    if(simplify(tempClauses, -literal)) {
-        if(randomHeuristicDPLL(tempClauses, assignment)) return true;
-    }
-
-    // Neither assignment resulted in satisfiability
-    assignment.erase(abs(literal));
-    return false;
-}
-
 int twoClauseHeuristic(const std::vector<std::vector<int>>& clauses, const std::unordered_map<int, bool>& assignment) {
     std::unordered_map<int, int> literalCounts;
     for(const auto& clause : clauses) {
@@ -136,7 +15,7 @@ int twoClauseHeuristic(const std::vector<std::vector<int>>& clauses, const std::
         }
     }
 
-    if(literalCounts.empty()) return 0;
+    if(literalCounts.empty()) return std::abs(clauses[0][0]);
 
     int maxCount = 0;
     std::vector<int> maxLiterals;
@@ -155,126 +34,289 @@ int twoClauseHeuristic(const std::vector<std::vector<int>>& clauses, const std::
     return maxLiterals[g() % maxLiterals.size()];
 }
 
-bool twoClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment) {
-    // If there are no clauses, it's satisfiable
-    if(clauses.empty()) return true;
-    
-    // If there's an empty clause, it's unsatisfiable
-    for(const auto& clause : clauses) if(clause.empty()) return false;
-
-    // Find the first unassigned literal
-    int literal = twoClauseHeuristic(clauses, assignment);
+int maxLiteralHeuristic(const std::vector<std::vector<int>>& clauses, const std::unordered_map<int, bool>& assignment) {
+    std::unordered_map<int, int> literalCounts;
     for(const auto& clause : clauses) {
         for(int lit : clause) {
             if(assignment.find(abs(lit)) == assignment.end()) {
-                literal = lit;
-                break;
+                literalCounts[lit]++;
             }
         }
-        if(literal != 0) break;
     }
 
-    // If all literals are assigned, return true as every clause must be satisfied
-    if(literal == 0) return true;
+    if(literalCounts.empty()) return std::abs(clauses[0][0]);
 
-    // Try assigning the literal to true
-    assignment[abs(literal)] = (literal > 0);
-    auto tempClauses = clauses;
-    if(simplify(tempClauses, literal)) {
-        if(simpleHeuristicDPLL(tempClauses, assignment)) return true;
-    }
-    
-    // Backtrack and try assigning the literal to false
-    assignment[abs(literal)] = (literal < 0);
-    tempClauses = clauses;
-    if(simplify(tempClauses, -literal)) {
-        if(simpleHeuristicDPLL(tempClauses, assignment)) return true;
+    int maxCount = 0;
+    std::vector<int> maxLiterals;
+    for(const auto& [literal, count] : literalCounts) {
+        if(count > maxCount) {
+            maxCount = count;
+            maxLiterals = {literal};
+        } else if(count == maxCount) {
+            maxLiterals.push_back(literal);
+        }
     }
 
-    // Neither assignment resulted in satisfiability
-    assignment.erase(abs(literal));
+    // Randomly select among the tied literals
+    std::random_device rd;
+    std::mt19937 g(rd());
+    return maxLiterals[g() % maxLiterals.size()];
+}
+
+int mixedHeuristic(const std::vector<std::vector<int>>& clauses, const std::unordered_map<int, bool>& assignment) {
+    int literal = twoClauseHeuristic(clauses, assignment);
+    if (literal != std::abs(clauses[0][0])) return literal;  // This means there was a 2-clause literal selected.
+    return maxLiteralHeuristic(clauses, assignment);
+}
+
+std::pair<std::vector<int>, bool> unit_clauses(const std::vector<std::vector<int>>& clauses) {
+    std::vector<int> single_clauses;
+    std::unordered_set<int> units_set;
+    for (const auto& cl : clauses) {
+        if (cl.size() == 1) {
+            single_clauses.push_back(cl[0]);
+            if (units_set.find(-cl[0]) != units_set.end()) { 
+                return {{}, false}; // return empty vector and unsatisfiable flag
+            }
+            units_set.insert(cl[0]);
+        }
+    }
+    return {single_clauses, true}; // return the unit clauses and satisfiable flag
+}
+
+std::vector<std::vector<int>> unit_propagation(const std::vector<std::vector<int>>& clauses, const std::unordered_set<int>& UC) {
+    std::vector<std::vector<int>> C;
+    for (const auto& cl : clauses) {
+        std::vector<int> C_;
+        bool flag = false;
+        for (int li : cl) {
+            if (UC.find(li) != UC.end()) {
+                flag = true;
+                break;
+            }
+            if (UC.find(-li) != UC.end()) {
+                continue;
+            }
+            C_.push_back(li);
+        }
+        if (!flag) {
+            C.push_back(C_);
+        }
+    }
+    return C;
+}
+
+bool simpleHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications) {
+    if (clauses.empty()) return true;
+    if (std::any_of(clauses.begin(), clauses.end(), [](const std::vector<int>& cl) { return cl.empty(); })) return false;
+
+    // Unit Propagation
+    auto unit_clauses_result = unit_clauses(clauses);
+    std::vector<int> unit_clauses_list = unit_clauses_result.first;
+
+    if (!unit_clauses_result.second) {
+        return false; // Formula is unsatisfiable
+    }
+
+    // std::vector<int> unit_clauses_list = unit_clauses(clauses);
+    for (int unit : unit_clauses_list) {
+        if (std::find(unit_clauses_list.begin(), unit_clauses_list.end(), -unit) != unit_clauses_list.end()) {
+            return false;
+        }
+    }
+    if (!unit_clauses_list.empty()) {
+        std::unordered_set<int> UC(unit_clauses_list.begin(), unit_clauses_list.end());
+        std::vector<std::vector<int>> new_list = unit_propagation(clauses, UC);
+        for (int unit : unit_clauses_list) {
+            assignment[std::abs(unit)] = unit > 0;
+        }
+        return simpleHeuristicDPLL(new_list, assignment, numSplittingApplications);
+    }
+
+    // Take out a random literal from clauses
+    int literal = std::abs(clauses[0][0]);
+    numSplittingApplications++; 
+
+    std::unordered_map<int, bool> assignment1 = assignment;
+
+    // Set the first literal to true
+    assignment1[literal] = true;
+    std::vector<std::vector<int>> new_list = unit_propagation(clauses, {literal});
+    if (simpleHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
+    }
+
+    // If the first does not satisfy, set the literal to false
+    assignment1[literal] = false;
+    new_list = unit_propagation(clauses, {-literal});
+    if (simpleHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
+    }
+
     return false;
 }
 
-std::unordered_map<int, double> vsids_score;
+bool randomHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications) {
+    if (clauses.empty()) return true;
+    if (std::any_of(clauses.begin(), clauses.end(), [](const std::vector<int>& cl) { return cl.empty(); })) return false;
 
-// Initialize VSIDS scores
-void initializeVSIDS(const std::vector<std::vector<int>>& clauses) {
-    for (const auto& clause : clauses) {
-        for (int lit : clause) {
-            vsids_score[abs(lit)] = 1.0; // Initialize with a default score
+    // Unit Propagation
+    auto unit_clauses_result = unit_clauses(clauses);
+    std::vector<int> unit_clauses_list = unit_clauses_result.first;
+
+    if (!unit_clauses_result.second) {
+        return false; // Formula is unsatisfiable
+    }
+
+    // std::vector<int> unit_clauses_list = unit_clauses(clauses);
+    for (int unit : unit_clauses_list) {
+        if (std::find(unit_clauses_list.begin(), unit_clauses_list.end(), -unit) != unit_clauses_list.end()) {
+            return false;
         }
     }
-}
-
-// Decay VSIDS scores periodically
-void decayVSIDS() {
-    for (auto& [var, score] : vsids_score) {
-        score *= 0.95; // Decay factor; adjust based on your preference
+    if (!unit_clauses_list.empty()) {
+        std::unordered_set<int> UC(unit_clauses_list.begin(), unit_clauses_list.end());
+        std::vector<std::vector<int>> new_list = unit_propagation(clauses, UC);
+        for (int unit : unit_clauses_list) {
+            assignment[std::abs(unit)] = unit > 0;
+        }
+        return randomHeuristicDPLL(new_list, assignment, numSplittingApplications);
     }
+
+    // Take out a random literal from clauses
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, clauses.size() - 1);
+    int row = dis(gen);
+    std::uniform_int_distribution<> dis2(0, clauses[row].size() - 1);
+    int column = dis2(gen);
+    int literal = std::abs(clauses[row][column]);
+    numSplittingApplications++; 
+
+    std::unordered_map<int, bool> assignment1 = assignment;
+
+    // Set the first literal to true
+    assignment1[literal] = true;
+    std::vector<std::vector<int>> new_list = unit_propagation(clauses, {literal});
+    if (randomHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
+    }
+
+    // If the first does not satisfy, set the literal to false
+    assignment1[literal] = false;
+    new_list = unit_propagation(clauses, {-literal});
+    if (randomHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
+    }
+
+    return false;
 }
 
-// Increase the score of a variable after a conflict
-void bumpVSIDS(int var) {
-    vsids_score[var] += 1.0;
-}
 
-// Get variable with the highest VSIDS score that hasn't been assigned yet
-int getHighestScoreLiteral(const std::vector<std::vector<int>>& clauses, const std::unordered_map<int, bool>& assignment) {
-    int bestVar = 0;
-    double bestScore = -1.0;
-    
-    for (const auto& clause : clauses) {
-        for (int lit : clause) {
-            int var = abs(lit);
-            if (assignment.find(var) == assignment.end() && vsids_score[var] > bestScore) {
-                bestScore = vsids_score[var];
-                bestVar = lit;  // select the literal, not just the variable
-            }
+bool twoClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications) {
+    if (clauses.empty()) return true;
+    if (std::any_of(clauses.begin(), clauses.end(), [](const std::vector<int>& cl) { return cl.empty(); })) return false;
+
+    // Unit Propagation
+    auto unit_clauses_result = unit_clauses(clauses);
+    std::vector<int> unit_clauses_list = unit_clauses_result.first;
+
+    if (!unit_clauses_result.second) {
+        return false; // Formula is unsatisfiable
+    }
+
+    // std::vector<int> unit_clauses_list = unit_clauses(clauses);
+    for (int unit : unit_clauses_list) {
+        if (std::find(unit_clauses_list.begin(), unit_clauses_list.end(), -unit) != unit_clauses_list.end()) {
+            return false;
         }
     }
-    return bestVar;  // Returns 0 if no unassigned variable is found
+    if (!unit_clauses_list.empty()) {
+        std::unordered_set<int> UC(unit_clauses_list.begin(), unit_clauses_list.end());
+        std::vector<std::vector<int>> new_list = unit_propagation(clauses, UC);
+        for (int unit : unit_clauses_list) {
+            assignment[std::abs(unit)] = unit > 0;
+        }
+        return twoClauseHeuristicDPLL(new_list, assignment, numSplittingApplications);
+    }
+
+    // Follow two clause heuristic
+    int literal = twoClauseHeuristic(clauses, assignment);
+    numSplittingApplications++; 
+
+    std::unordered_map<int, bool> assignment1 = assignment;
+
+    // Set the first literal to true
+    assignment1[literal] = true;
+    std::vector<std::vector<int>> new_list = unit_propagation(clauses, {literal});
+    if (twoClauseHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
+    }
+
+    // If the first does not satisfy, set the literal to false
+    assignment1[literal] = false;
+    new_list = unit_propagation(clauses, {-literal});
+    if (twoClauseHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
+    }
+
+    return false;
 }
 
-bool VSIDSHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment) {
-    // If there are no clauses, it's satisfiable
-    if(clauses.empty()) return true;
-    
-    // If there's an empty clause, it's unsatisfiable
-    for(const auto& clause : clauses) if(clause.empty()) return false;
+bool maxLiteralClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications) {
+    if (clauses.empty()) return true;
+    if (std::any_of(clauses.begin(), clauses.end(), [](const std::vector<int>& cl) { return cl.empty(); })) return false;
 
-    // Find the first unassigned literal
-    int literal = getHighestScoreLiteral(clauses, assignment);
-    if (literal == 0) return true; // All literals are assigned
+    // Unit Propagation
+    auto unit_clauses_result = unit_clauses(clauses);
+    std::vector<int> unit_clauses_list = unit_clauses_result.first;
 
-    for(const auto& clause : clauses) {
-        for(int lit : clause) {
-            if(assignment.find(abs(lit)) == assignment.end()) {
-                literal = lit;
-                break;
-            }
+    if (!unit_clauses_result.second) {
+        return false; // Formula is unsatisfiable
+    }
+
+    // std::vector<int> unit_clauses_list = unit_clauses(clauses);
+    for (int unit : unit_clauses_list) {
+        if (std::find(unit_clauses_list.begin(), unit_clauses_list.end(), -unit) != unit_clauses_list.end()) {
+            return false;
         }
-        if(literal != 0) break;
+    }
+    if (!unit_clauses_list.empty()) {
+        std::unordered_set<int> UC(unit_clauses_list.begin(), unit_clauses_list.end());
+        std::vector<std::vector<int>> new_list = unit_propagation(clauses, UC);
+        for (int unit : unit_clauses_list) {
+            assignment[std::abs(unit)] = unit > 0;
+        }
+        return maxLiteralClauseHeuristicDPLL(new_list, assignment, numSplittingApplications);
     }
 
-    // If all literals are assigned, return true as every clause must be satisfied
-    if(literal == 0) return true;
+    // Follow two clause heuristic
+    int literal = mixedHeuristic(clauses, assignment);
+    numSplittingApplications++; 
 
-    // Try assigning the literal to true
-    assignment[abs(literal)] = (literal > 0);
-    auto tempClauses = clauses;
-    if(simplify(tempClauses, literal)) {
-        if(simpleHeuristicDPLL(tempClauses, assignment)) return true;
-    }
-    
-    // Backtrack and try assigning the literal to false
-    assignment[abs(literal)] = (literal < 0);
-    tempClauses = clauses;
-    if(simplify(tempClauses, -literal)) {
-        if(simpleHeuristicDPLL(tempClauses, assignment)) return true;
+    std::unordered_map<int, bool> assignment1 = assignment;
+
+    // Set the first literal to true
+    assignment1[literal] = true;
+    std::vector<std::vector<int>> new_list = unit_propagation(clauses, {literal});
+    if (maxLiteralClauseHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
     }
 
-    // Neither assignment resulted in satisfiability
-    assignment.erase(abs(literal));
+    // If the first does not satisfy, set the literal to false
+    assignment1[literal] = false;
+    new_list = unit_propagation(clauses, {-literal});
+    if (maxLiteralClauseHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+        assignment = assignment1;
+        return true;
+    }
+
     return false;
 }
