@@ -69,6 +69,33 @@ int mixedHeuristic(const std::vector<std::vector<int>>& clauses, const std::unor
     return maxLiteralHeuristic(clauses, assignment);
 }
 
+int benchmarkHeuristic(const std::vector<std::vector<int>>& clauses, const std::unordered_map<int, bool>& assignment) {
+    std::unordered_map<int, double> literalWeights;
+
+    for(const auto& clause : clauses) {
+        double weight = std::pow(2.0, -static_cast<double>(clause.size()));
+        for(int lit : clause) {
+            if(assignment.find(abs(lit)) == assignment.end()) {
+                literalWeights[lit] += weight;
+            }
+        }
+    }
+
+    if(literalWeights.empty()) return std::abs(clauses[0][0]);
+
+    // Find the literal with the maximum weight
+    int bestLiteral = 0;
+    double maxWeight = -1;
+    for(const auto& [literal, weight] : literalWeights) {
+        if(weight > maxWeight) {
+            maxWeight = weight;
+            bestLiteral = literal;
+        }
+    }
+
+    return bestLiteral;
+}
+
 std::pair<std::vector<int>, bool> unit_clauses(const std::vector<std::vector<int>>& clauses) {
     std::vector<int> single_clauses;
     std::unordered_set<int> units_set;
@@ -269,7 +296,7 @@ bool twoClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unorder
     return false;
 }
 
-bool maxLiteralClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications) {
+bool benchmarkHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications) {
     if (clauses.empty()) return true;
     if (std::any_of(clauses.begin(), clauses.end(), [](const std::vector<int>& cl) { return cl.empty(); })) return false;
 
@@ -293,11 +320,11 @@ bool maxLiteralClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::
         for (int unit : unit_clauses_list) {
             assignment[std::abs(unit)] = unit > 0;
         }
-        return maxLiteralClauseHeuristicDPLL(new_list, assignment, numSplittingApplications);
+        return benchmarkHeuristicDPLL(new_list, assignment, numSplittingApplications);
     }
 
-    // Follow two clause heuristic
-    int literal = mixedHeuristic(clauses, assignment);
+    // Follow benchmark heuristic
+    int literal = benchmarkHeuristic(clauses, assignment);
     numSplittingApplications++; 
 
     std::unordered_map<int, bool> assignment1 = assignment;
@@ -305,7 +332,7 @@ bool maxLiteralClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::
     // Set the first literal to true
     assignment1[literal] = true;
     std::vector<std::vector<int>> new_list = unit_propagation(clauses, {literal});
-    if (maxLiteralClauseHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+    if (benchmarkHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
         assignment = assignment1;
         return true;
     }
@@ -313,10 +340,12 @@ bool maxLiteralClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::
     // If the first does not satisfy, set the literal to false
     assignment1[literal] = false;
     new_list = unit_propagation(clauses, {-literal});
-    if (maxLiteralClauseHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
+    if (benchmarkHeuristicDPLL(new_list, assignment1, numSplittingApplications)) {
         assignment = assignment1;
         return true;
     }
 
     return false;
 }
+
+
