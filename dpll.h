@@ -12,5 +12,6 @@ bool randomHeuristicDPLL(std::vector<std::vector<int>> &clauses, std::unordered_
 
 bool twoClauseHeuristicDPLL(std::vector<std::vector<int>> &clauses, std::unordered_map<int, bool> &assignment, int & numSplittingApplications);
 
-bool maxLiteralClauseHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications);
+bool benchmarkHeuristicDPLL(std::vector<std::vector<int>>& clauses, std::unordered_map<int, bool>& assignment, int & numSplittingApplications);
+
 #endif // DPLL_H
