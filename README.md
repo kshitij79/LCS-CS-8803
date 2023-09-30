@@ -27,12 +27,12 @@ After compilation, run the experiment with:
 
 ```./experiment.exe ```
 
-2. Generate Graph
+Generate Graph:
 To generate a graph after running the experiments, execute the Python visualization script:
 
 ```python visualize.py```
 
-3. Solve Einstein's Problem
+Solve Einstein's Problem:
 To compile the files for solving Einstein's problem, use the command:
 
 ```g++ -o Project1 Project1.cpp dpll.cpp```
