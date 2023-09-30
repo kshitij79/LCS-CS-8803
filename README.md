@@ -18,23 +18,18 @@ How to Compile and Run
 1. Compile and Run the Experiment
 To compile the experiment files, use the following command:
 
-bash
-g++ -o experiment experiment.cpp dpll.cpp
+```g++ -o experiment experiment.cpp dpll.cpp
 After compilation, run the experiment with:
 
-bash
-./experiment.exe
+```./experiment.exe
 2. Generate Graph
 To generate a graph after running the experiments, execute the Python visualization script:
 
-bash
-python visualize.py
+```python visualize.py
 3. Solve Einstein's Problem
 To compile the files for solving Einstein's problem, use the command:
 
-bash
-g++ -o Project1 Project1.cpp dpll.cpp
+```g++ -o Project1 Project1.cpp dpll.cpp
 Then, run the executable:
 
-bash
-./Project1
+```./Project1
