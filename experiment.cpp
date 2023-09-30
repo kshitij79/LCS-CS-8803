@@ -52,11 +52,12 @@ bool DPLLWrapper(std::vector<std::vector<int>>& clauses, int & numSplittingAppli
     auto start = std::chrono::high_resolution_clock::now();
     
     bool result;
-    if(procedure == "maxLiteral")
-        result = twoClauseHeuristicDPLL(clauses, assignment, numSplittingApplications);
-    else if(procedure == "random")
+
+    if(procedure == "Benchmark Heuristic")
+        result = benchmarkHeuristicDPLL(clauses, assignment, numSplittingApplications);
+    else if(procedure == "Random Heuristic")
         result = randomHeuristicDPLL(clauses, assignment, numSplittingApplications);
-    else if(procedure == "simple")
+    else if(procedure == "Naive Heuristic")
         result = simpleHeuristicDPLL(clauses, assignment, numSplittingApplications);    
     else
         result = twoClauseHeuristicDPLL(clauses, assignment, numSplittingApplications);   
@@ -81,12 +82,11 @@ int main() {
 
     outputFile << "Procedure,Ratio,MedianTime,MedianSplits,NoTimeout,SatisfiabilityRatio\n";
 
-    // std::vector<double> ratios = {3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0};
-    std::vector<double> ratios = {3.2, 3.4, 3.6};
+    std::vector<double> ratios = {3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0};
 
-    int N = 100; // Adjust as needed
+    int N = 150; // Adjust as needed
     int runs = 100;
-    std::vector<std::string> procedures = {"twoClause", "random", "maxLiteral"};
+    std::vector<std::string> procedures = {"Benchmark Heuristic", "Two-Clause Heuristic"};
 
     for (double ratio : ratios) {
         int L = static_cast<int>(ratio * N);
@@ -106,7 +106,7 @@ int main() {
                 try {
                     bool isSatisfiable = runWithTimeout([&]() {
                                             return DPLLWrapper(formula[i], noSplits, time, procedure);
-                                        }, 1);
+                                        }, 10);
                     if (isSatisfiable) {
                         satisfiableCount++;
                     }
@@ -116,6 +116,7 @@ int main() {
                     splitsData.push_back(10000);
                     timeData.push_back(10000);
                     noTimeoutCount++; 
+                    std::cout<< procedure <<" timeout " << i << " " << ratio <<std::endl;
                 }
             }
             
